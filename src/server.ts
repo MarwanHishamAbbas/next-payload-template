@@ -1,11 +1,23 @@
 import express from "express"
 import payload from "payload"
 import { nextApp, nextHandler } from "./next-utils"
+import * as trpcExpress from "@trpc/server/adapters/express"
 import nextBuild from "next/dist/build"
 import path from "path"
+import { inferAsyncReturnType } from "@trpc/server"
+import { appRouter } from "./trpc"
 
 require("dotenv").config()
 const app = express()
+const createContext = ({
+  req,
+  res,
+}: trpcExpress.CreateExpressContextOptions) => ({
+  req,
+  res,
+})
+
+export type ExpressContext = inferAsyncReturnType<typeof createContext>
 
 const PORT = Number(process.env.PORT) || 3000
 
@@ -32,6 +44,10 @@ const start = async () => {
   }
 
   app.use((req, res) => nextHandler(req, res))
+  app.use(
+    "/api/trpc",
+    trpcExpress.createExpressMiddleware({ router: appRouter, createContext })
+  )
 
   nextApp.prepare().then(() => {
     payload.logger.info("Next.js started")
